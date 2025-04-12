@@ -30,6 +30,7 @@ import { TlapsClient } from './tlaps';
 import { CurrentProofStepWebviewViewProvider } from './panels/currentProofStepWebviewViewProvider';
 import { moduleSearchPaths } from './paths';
 import { ModuleSearchPathsTreeDataProvider } from './panels/moduleSearchPathsTreeDataProvider';
+import { TlaUnicodeOnTypeFormattingEditProvider } from './unicode/tla';
 
 const TLAPLUS_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS };
 const TLAPLUS_CFG_FILE_SELECTOR: vscode.DocumentSelector = { scheme: 'file', language: LANG_TLAPLUS_CFG };
@@ -102,8 +103,14 @@ export function activate(context: vscode.ExtensionContext): void {
             new TLADebugAdapterServerDescriptorFactory()),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaOnTypeFormattingEditProvider(),
-            '\n', 'd', 'e', 'f', 'r'),
+            new TlaUnicodeOnTypeFormattingEditProvider(),
+            '=', '+', '-', '>', '<', '_', ']', ':', '~', '/', '\\', '|', '#', '.', '!', '?', ')',
+            'A', 'E', 'X', 'c', 'd', 'g', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'v', 'x'),
+        // TODO: combine the providers
+        // vscode.languages.registerOnTypeFormattingEditProvider(
+        //     TLAPLUS_FILE_SELECTOR,
+        //     new TlaOnTypeFormattingEditProvider(),
+        //     '\n', 'd', 'e', 'f', 'r'),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_CFG_FILE_SELECTOR,
             new CfgOnTypeFormattingEditProvider(),
