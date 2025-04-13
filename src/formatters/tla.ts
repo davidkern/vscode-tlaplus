@@ -15,8 +15,13 @@ export class TlaOnTypeFormattingEditProvider implements vscode.OnTypeFormattingE
         if (position.line === 0) {
             return [];
         }
-        if (ch === '\n') {
-            return tryIndentBlockStart(document, position, options);
+        if (ch === ' ' || ch === '\n') {
+            const subs = trySubstitution(ch, document, position);
+            if (ch === '\n') {
+                return [...subs, ...tryIndentBlockStart(document, position, options)];
+            } else {
+                return [...subs];
+            }
         } else if (ch === 'd' || ch === 'e' || ch === 'f' || ch === 'r') {
             return tryIndentBlockEnd(document, position, options);
         }
@@ -107,7 +112,7 @@ function testSimpleBlockStart(line: vscode.TextLine): LineInfo | undefined {
 }
 
 function testStateDefBlockStart(line: vscode.TextLine, options: vscode.FormattingOptions): LineInfo | undefined {
-    const gMatches = /^((\s*)[\w(),\s]+==\s*)((?:\/\\|\\\/).*)?\s*$/g.exec(line.text);
+    const gMatches = /^((\s*)[\w(),\s]+(≜|==)\s*)((?:\/\\|\\\/|∨|∧).*)?\s*$/g.exec(line.text);
     if (!gMatches) {
         return undefined;
     }
@@ -126,4 +131,134 @@ function testBlockStart(line: vscode.TextLine): LineInfo | undefined {
 function testBlockEnd(line: vscode.TextLine): LineInfo | undefined {
     const matches = /^(\s*)(?:end\b|else\b|elsif\b|or\b|\}).*/g.exec(line.text);
     return matches ? new LineInfo(line, matches[1], IndentationType.Left) : undefined;
+}
+
+// https://github.com/tlaplus-community/tlauc/blob/main/resources/tla-unicode.csv
+const substitution : {[key: string]: string} = {
+    '->': '→',
+    '-|': '⊣',
+    '-+->': '⇸',
+    '==': '≜',
+    '=>': '⇒',
+    '=<': '≤',
+    '=|': '⫤',
+    '<-': '←',
+    '<=': '≤',
+    '<=>': '⇔',
+    '<>': '◇',
+    '<<': '⟨',
+    '>>': '⟩',
+    '>=': '≥',
+    '|-': '⊢',
+    '|->': '↦',
+    '|=': '⊨',
+    '||': '‖',
+    '[]': '□',
+    '::': '∷',
+    ':=': '≔',
+    '::=': '⩴',
+    '~': '¬',
+    '~>': '↝',
+    '/=': '≠',
+    '/\\': '∧',
+    '\\/': '∨',
+    '#': '≠',
+    '..': '‥',
+    '...': '…',
+    '^+': '⁺',
+    '!!': '‼',
+    '??': '⁇',
+    '(/)': '⊘',
+    '(+)': '⊕',
+    '(-)': '⊖',
+    '(.)': '⊙',
+    '(\\X)': '⊗',
+    '\\A': '∀',
+    '\\E': '∃',
+    '\\approx': '≈',
+    '\\asymp': '≍',
+    '\\cong': '≅',
+    '\\doteq': '≐',
+    '\\equiv': '≡',
+    '\\exists': '∃',
+    '\\forall': '∀',
+    '\\in': '∈',
+    '\\geq': '≥',
+    '\\gg': '≫',
+    '\\land': '∧',
+    '\\leq': '≤',
+    '\\lor': '∨',
+    '\\ll': '≪',
+    '\\lnot': '¬',
+    '\\neg': '¬',
+    '\\notin': '∉',
+    '\\prec': '≺',
+    '\\succ': '≻',
+    '\\preceq': '⪯',
+    '\\succeq': '⪰',
+    '\\propto': '∝',
+    '\\sim': '∼',
+    '\\simeq': '≃',
+    '\\sqsubset': '⊏',
+    '\\sqsupset': '⊐',
+    '\\sqsubseteq': '⊑',
+    '\\sqsupseteq': '⊒',
+    '\\subset': '⊂',
+    '\\supset': '⊃',
+    '\\subseteq': '⊆',
+    '\\supseteq': '⊇',
+    '\\intersect': '∩',
+    '\\cap': '∩',
+    '\\union': '∪',
+    '\\cup': '∪',
+    '\\o': '∘',
+    '\\oplus': '⊕',
+    '\\ominus': '⊖',
+    '\\odot': '⊙',
+    '\\oslash': '⊘',
+    '\\otimes': '⊗',
+    '\\bigcirc': '◯',
+    '\\bullet': '●',
+    '\\div': '÷',
+    '\\circ': '∘',
+    '\\star': '⋆',
+    '\\sqcap': '⊓',
+    '\\sqcup': '⊔',
+    '\\uplus': '⊎',
+    '\\X': '×',
+    '\\times': '×',
+    '\\wr': '≀',
+    '\\cdot': '⋅',
+    'Nat': 'ℕ',
+    'Int': 'ℤ',
+    'Real': 'ℝ',
+};
+
+function escapeStringRegexp(s: string): string {
+    return s.replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&');
+}
+
+function buildSubstitutionMatcher(): RegExp {
+    const keys = Object.keys(substitution);
+    const matchers = keys.map((value) => `(${escapeStringRegexp(value)})`);
+    return new RegExp(`(${matchers.join('|')})(\\s|$)`, 'g');
+}
+
+const substitutionMatcher = buildSubstitutionMatcher();
+
+function trySubstitution(
+    ch: string,
+    document: vscode.TextDocument,
+    position: vscode.Position,
+) {
+    const line = ch === '\n' ? position.line - 1 : position.line;
+    const lineText = document.lineAt(line).text;
+    const matches = [...lineText.matchAll(substitutionMatcher)];
+
+    return matches.map(match => {
+        console.log(match);
+        const start = new vscode.Position(line, match.index);
+        const end = new vscode.Position(line, match.index + match[1].length);
+        return vscode.TextEdit.replace(new vscode.Range(start, end), substitution[match[1]]);
+    });
 }

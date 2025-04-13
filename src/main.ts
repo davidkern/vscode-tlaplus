@@ -103,14 +103,8 @@ export function activate(context: vscode.ExtensionContext): void {
             new TLADebugAdapterServerDescriptorFactory()),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_FILE_SELECTOR,
-            new TlaUnicodeOnTypeFormattingEditProvider(),
-            '=', '+', '-', '>', '<', '_', ']', ':', '~', '/', '\\', '|', '#', '.', '!', '?', ')',
-            'A', 'E', 'X', 'c', 'd', 'g', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'v', 'x'),
-        // TODO: combine the providers
-        // vscode.languages.registerOnTypeFormattingEditProvider(
-        //     TLAPLUS_FILE_SELECTOR,
-        //     new TlaOnTypeFormattingEditProvider(),
-        //     '\n', 'd', 'e', 'f', 'r'),
+            new TlaOnTypeFormattingEditProvider(),
+            ' ', '\n', 'd', 'e', 'f', 'r'),
         vscode.languages.registerOnTypeFormattingEditProvider(
             TLAPLUS_CFG_FILE_SELECTOR,
             new CfgOnTypeFormattingEditProvider(),
